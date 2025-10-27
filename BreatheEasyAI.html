@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>BreatheEasy — AI Air Quality Advisor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --md-sys-color-primary: #00F5A0;
+            --md-sys-color-on-primary: #003824;
+            --md-sys-color-primary-container: #E0FFF4;
+            --md-sys-color-on-primary-container: #002114;
+            --md-sys-color-surface: #F0F9FF;
+            --md-sys-color-surface-container: #E0F2FE;
+            --md-sys-color-surface-container-high: #BAE6FD;
+            --md-sys-color-on-surface: #0A2F35;
+            --md-sys-color-on-surface-variant: #2D5F6E;
+            --md-sys-color-outline: #5FB3C6;
+            --md-sys-color-outline-variant: #A5D8E8;
+            --md-sys-color-error: #FF6B6B;
+            --md-sys-color-error-container: #FFE8E8;
+            --md-elevation-1: 0 4px 12px rgba(0, 245, 160, 0.15), 0 2px 6px rgba(0, 200, 255, 0.1);
+            --md-elevation-2: 0 8px 24px rgba(0, 245, 160, 0.2), 0 4px 12px rgba(0, 200, 255, 0.15);
+            --md-elevation-3: 0 16px 40px rgba(0, 245, 160, 0.25), 0 8px 24px rgba(0, 200, 255, 0.2);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --md-sys-color-primary: #00F5A0;
+                --md-sys-color-on-primary: #003824;
+                --md-sys-color-primary-container: #00573D;
+                --md-sys-color-on-primary-container: #E0FFF4;
+                --md-sys-color-surface: #0A1F1F;
+                --md-sys-color-surface-container: #152929;
+                --md-sys-color-surface-container-high: #1F3838;
+                --md-sys-color-on-surface: #D4F4F4;
+                --md-sys-color-on-surface-variant: #89C7C7;
+                --md-sys-color-outline: #4A9999;
+                --md-sys-color-outline-variant: #2A5555;
+                --md-sys-color-error: #FF6B6B;
+                --md-sys-color-error-container: #4D1F1F;
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        html {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 50%, #F0F4F8 100%);
+            color: var(--md-sys-color-on-surface);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(59, 130, 246, 0.03) 2px, rgba(59, 130, 246, 0.03) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(59, 130, 246, 0.03) 2px, rgba(59, 130, 246, 0.03) 4px);
+            pointer-events: none;
+            z-index: 0;
+            animation: gridMove 60s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #0A1F1F 0%, #0D2D2D 25%, #003824 100%);
+            }
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            animation: fadeInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .logo svg {
+            width: 48px;
+            height: 48px;
+            animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.6));
+        }
+
+        .logo h1 {
+            font-family: 'Google Sans', sans-serif;
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #3B82F6 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+        }
+
+        .tagline {
+            font-size: 16px;
+            color: var(--md-sys-color-on-surface-variant);
+            font-weight: 400;
+            margin-top: 8px;
+        }
+
+        /* Glass Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-radius: 24px;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 
+                0 8px 32px rgba(59, 130, 246, 0.15),
+                0 4px 16px rgba(139, 92, 246, 0.1),
+                0 0 0 1px rgba(255, 255, 255, 0.8) inset,
+                0 0 60px rgba(59, 130, 246, 0.3);
+            padding: 32px;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1), cardGlow 4s ease-in-out infinite;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 30%,
+                rgba(59, 130, 246, 0.1) 50%,
+                transparent 70%
+            );
+            animation: shimmer 6s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes cardGlow {
+            0%, 100% {
+                box-shadow: 
+                    0 8px 32px rgba(59, 130, 246, 0.15),
+                    0 4px 16px rgba(139, 92, 246, 0.1),
+                    0 0 0 1px rgba(255, 255, 255, 0.8) inset,
+                    0 0 60px rgba(59, 130, 246, 0.3);
+            }
+            50% {
+                box-shadow: 
+                    0 8px 32px rgba(59, 130, 246, 0.25),
+                    0 4px 16px rgba(139, 92, 246, 0.15),
+                    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+                    0 0 80px rgba(59, 130, 246, 0.5);
+            }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .glass-card {
+                background: rgba(30, 30, 40, 0.75);
+                border: 2px solid rgba(59, 130, 246, 0.4);
+                box-shadow: 
+                    0 8px 32px rgba(59, 130, 246, 0.2),
+                    0 4px 16px rgba(139, 92, 246, 0.15),
+                    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+                    0 0 60px rgba(59, 130, 246, 0.4);
+            }
+        }
+
+        .glass-card:hover {
+            box-shadow: 
+                0 12px 48px rgba(59, 130, 246, 0.3),
+                0 6px 24px rgba(139, 92, 246, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+                0 0 100px rgba(59, 130, 246, 0.6);
+            transform: translateY(-4px) scale(1.01);
+        }
+
+        .input-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-family: 'Google Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--md-sys-color-on-surface);
+            margin-bottom: 8px;
+            letter-spacing: 0.25px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid var(--md-sys-color-outline-variant);
+            border-radius: 12px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 16px;
+            background: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 0 20px rgba(59, 130, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236F7977' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            padding-right: 40px;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 100px;
+            font-family: 'Google Sans', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-primary:hover:not(:disabled)::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            box-shadow: 0 6px 24px rgba(59, 130, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            border: 2px solid var(--md-sys-color-on-primary);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Results Card */
+        .results-card {
+            margin-top: 32px;
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        }
+
+        .results-header svg {
+            width: 28px;
+            height: 28px;
+            color: var(--md-sys-color-primary);
+        }
+
+        .results-header h2 {
+            font-family: 'Google Sans', sans-serif;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--md-sys-color-on-surface);
+        }
+
+        .results-content {
+            line-height: 1.75;
+            font-size: 15px;
+            color: var(--md-sys-color-on-surface);
+            white-space: pre-line;
+        }
+
+        .results-content strong {
+            font-weight: 500;
+            color: var(--md-sys-color-primary);
+        }
+
+        /* Badge for PM2.5/AQI display */
+        .pm-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 18px;
+            border-radius: 28px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            box-shadow: var(--md-elevation-1);
+            border: 2px solid rgba(59,130,246,0.08);
+            background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(240,249,255,0.9));
+        }
+
+        .pm-value { font-family: 'Google Sans', sans-serif; font-size: 16px; }
+        .aqi-value { font-family: 'Google Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); }
+
+        .badge-good { background: linear-gradient(135deg, #00F5A0, #00D4A0); color: #003824; border: 2px solid #00F5A0; }
+        .badge-moderate { background: linear-gradient(135deg, #FFD700, #FFA500); color: #5C3A00; border: 2px solid #FFD700; }
+        .badge-sensitive { background: linear-gradient(135deg, #FF8C42, #FF6B35); color: #4D1F00; border: 2px solid #FF8C42; }
+        .badge-unhealthy { background: linear-gradient(135deg, #FF6B6B, #EE4444); color: #FFFFFF; border: 2px solid #FF6B6B; }
+        .badge-very-unhealthy { background: linear-gradient(135deg, #C44EFF, #9D3BCC); color: #FFFFFF; border: 2px solid #C44EFF; }
+        .badge-hazardous { background: linear-gradient(135deg, #8B0000, #5C0000); color: #FFFFFF; border: 2px solid #8B0000; }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 16px 12px;
+            }
+            
+            .logo h1 {
+                font-size: 28px;
+            }
+            
+            .glass-card {
+                padding: 24px;
+                border-radius: 20px;
+            }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 48px;
+            padding: 24px;
+            color: var(--md-sys-color-on-surface-variant);
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: var(--md-sys-color-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--md-sys-color-primary)">
+                    <path d="M9 18V5l12-2v13"></path>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="16" r="3"></circle>
+                </svg>
+                <h1>BreatheEasy</h1>
+            </div>
+            <p class="tagline">AI-powered air quality monitoring and personalized health guidance</p>
+        </header>
+
+        <div class="glass-card">
+            <div class="input-container">
+                <form id="pmForm">
+                    <div class="form-group">
+                        <label for="pm25">PM2.5 Concentration (&micro;g/m&sup3;)</label>
+                        <input 
+                            type="number" 
+                            id="pm25" 
+                            name="pm25" 
+                            placeholder="Enter PM2.5 value in micrograms per cubic meter (e.g., 12.0)"
+                            step="0.1"
+                            min="0"
+                            max="1000"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="context">Environment Context</label>
+                        <select id="context" name="context" required>
+                            <option value="Indoor">Indoor</option>
+                            <option value="Outdoor">Outdoor</option>
+                            <option value="Classroom">Classroom</option>
+                            <option value="Bedroom">Bedroom</option>
+                            <option value="Office">Office</option>
+                            <option value="Gym">Gym</option>
+                            <option value="Vehicle">Vehicle</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Additional Information (Optional)</label>
+                        <textarea 
+                            id="notes" 
+                            name="notes" 
+                            placeholder="E.g., symptoms, existing air filters, health conditions, etc."
+                        ></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span id="btnText">Get AI-Powered Guidance</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="resultsContainer" style="display: none;">
+            <div class="glass-card results-card">
+                <div class="results-header">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                    <h2>Your Personalized Air Quality Report</h2>
+                </div>
+
+                <!-- PM2.5 / AQI Badge (updated) -->
+                <div id="pmBadge"></div>
+
+                <div class="results-content" id="resultsContent"></div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Powered by advanced AI • Data-driven recommendations • For educational purposes</p>
+            <p style="margin-top: 8px; font-size: 12px;">This tool provides general guidance and should not replace professional medical advice.</p>
+        </footer>
+    </div>
+
+    <script>
+        const form = document.getElementById('pmForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsContent = document.getElementById('resultsContent');
+        const pmBadge = document.getElementById('pmBadge');
+
+        /**
+         * Convert PM2.5 concentration (µg/m3) to AQI using the US EPA piecewise linear formula.
+         * Breakpoints used (PM2.5 µg/m3):
+         * 0.0 - 12.0   -> AQI 0 - 50
+         * 12.1 - 35.4  -> AQI 51 - 100
+         * 35.5 - 55.4  -> AQI 101 - 150
+         * 55.5 - 150.4 -> AQI 151 - 200
+         * 150.5 - 250.4-> AQI 201 - 300
+         * 250.5 - 350.4-> AQI 301 - 400
+         * 350.5 - 500.4-> AQI 401 - 500
+         */
+        function pm25ToAQI(pm) {
+            // ensure numeric
+            const C = Number(pm);
+            if (isNaN(C) || C < 0) return null;
+
+            const breakpoints = [
+                { c_lo: 0.0,   c_hi: 12.0,   i_lo: 0,   i_hi: 50 },
+                { c_lo: 12.1,  c_hi: 35.4,   i_lo: 51,  i_hi: 100 },
+                { c_lo: 35.5,  c_hi: 55.4,   i_lo: 101, i_hi: 150 },
+                { c_lo: 55.5,  c_hi: 150.4,  i_lo: 151, i_hi: 200 },
+                { c_lo: 150.5, c_hi: 250.4,  i_lo: 201, i_hi: 300 },
+                { c_lo: 250.5, c_hi: 350.4,  i_lo: 301, i_hi: 400 },
+                { c_lo: 350.5, c_hi: 500.4,  i_lo: 401, i_hi: 500 }
+            ];
+
+            // find the matching breakpoint
+            let bp = breakpoints.find(b => C >= b.c_lo && C <= b.c_hi);
+            // if concentration > 500.4, cap at 500
+            if (!bp) {
+                if (C > 500.4) return 500;
+                return null;
+            }
+
+            const { c_lo, c_hi, i_lo, i_hi } = bp;
+            const aqi = ((i_hi - i_lo) / (c_hi - c_lo)) * (C - c_lo) + i_lo;
+            return Math.round(aqi);
+        }
+
+        function getAQICategory(aqi) {
+            if (aqi === null) return { name: 'Unknown', class: 'badge-moderate' };
+            if (aqi <= 50) return { name: 'Good', class: 'badge-good' };
+            if (aqi <= 100) return { name: 'Moderate', class: 'badge-moderate' };
+            if (aqi <= 150) return { name: 'Unhealthy for Sensitive Groups', class: 'badge-sensitive' };
+            if (aqi <= 200) return { name: 'Unhealthy', class: 'badge-unhealthy' };
+            if (aqi <= 300) return { name: 'Very Unhealthy', class: 'badge-very-unhealthy' };
+            return { name: 'Hazardous', class: 'badge-hazardous' };
+        }
+
+        function buildPrompt(pm, aqi, context, notes) {
+            return `You are an expert environmental health advisor analyzing air quality data.
+
+PM2.5 (µg/m³): ${pm}
+Computed AQI (US EPA): ${aqi}
+Environment: ${context}
+Additional Context: ${notes || 'None provided'}
+
+Please provide a comprehensive, professional analysis structured as follows:
+
+**Immediate Actions** (3 specific, actionable steps for the next 2-4 hours)
+
+**Prevention & Daily Habits** (5 evidence-based recommendations)
+
+**3-Day Stability Plan** (Clear day-by-day schedule with times)
+
+**When to Seek Medical Help** (Clear warning signs in one concise paragraph)
+
+Use a professional, calm, and reassuring tone. Focus on practical, data-backed advice. Do not provide direct medical diagnosis.`;
+        }
+
+        async function simulateAIResponse(pm, aqi, context, notes) {
+            const category = getAQICategory(aqi);
+            // small artificial delay to simulate analysis
+            await new Promise(resolve => setTimeout(resolve, 1200));
+
+            let response = `Based on the current PM2.5 concentration of ${pm} µg/m³ (computed AQI ${aqi} — ${category.name}), here's your personalized guidance:\n\n`;
+
+            // Immediate Actions (simple rules using AQI)
+            response += `**Immediate Actions**\n`;
+            if (aqi <= 50) {
+                response += `• Air is good — enjoy outdoor activities normally.\n`;
+                response += `• Ventilate indoor spaces during the cleanest hours.\n`;
+                response += `• Maintain current filtration and cleaning routines.\n\n`;
+            } else if (aqi <= 100) {
+                response += `• Sensitive persons should limit prolonged outdoor exertion.\n`;
+                response += `• Monitor symptoms and use a basic purifier if available.\n`;
+                response += `• Keep windows partially closed during peak times.\n\n`;
+            } else if (aqi <= 150) {
+                response += `• Reduce prolonged or heavy outdoor exertion.\n`;
+                response += `• Use HEPA filtration indoors and keep windows closed.\n`;
+                response += `• Sensitive groups should remain indoors during peak pollution periods.\n\n`;
+            } else if (aqi <= 200) {
+                response += `• Avoid outdoor activities; wear N95 if going outside is essential.\n`;
+                response += `• Run air purifiers continuously and seal gaps.\n`;
+                response += `• Children, elderly, and those with respiratory conditions should stay indoors.\n\n`;
+            } else if (aqi <= 300) {
+                response += `• Stay indoors in a well-sealed space with HEPA filtration.\n`;
+                response += `• Avoid all physical exertion and consider temporary relocation if possible.\n`;
+                response += `• Stock emergency supplies and N95 masks.\n\n`;
+            } else {
+                response += `• Emergency conditions — sealed environment, industrial filtration where possible.\n`;
+                response += `• Wear high-grade respirators if exiting the area is necessary; consider evacuation.\n`;
+                response += `• Contact local authorities for guidance if situation persists.\n\n`;
+            }
+
+            // Prevention & Daily Habits
+            response += `**Prevention & Daily Habits**\n`;
+            response += `• Monitor PM2.5/AQI regularly and set alerts when AQI rises above 100.\n`;
+            response += `• Use appropriately sized HEPA purifiers and replace filters on schedule.\n`;
+            response += `• Reduce indoor pollutant sources: avoid indoor burning, strong aerosols, and unvented cooking.\n`;
+            response += `• Create a 'clean room' for sensitive occupants with the best filtration available.\n`;
+            response += `• Keep hydrated, maintain good nutrition, and limit strenuous indoor exercise when AQI is elevated.\n\n`;
+
+            // 3-day plan (generalized by category)
+            response += `**3-Day Stability Plan**\n`;
+            if (aqi <= 100) {
+                response += `Day 1: Normal activities; ventilate during cleaner periods.\nDay 2: Continue monitoring; keep purifiers on low if desired.\nDay 3: Resume normal outdoor plans if AQI remains low.\n\n`;
+            } else if (aqi <= 150) {
+                response += `Day 1: Limit outdoor activities; set purifiers to medium-high.\nDay 2: Keep windows closed; check filter status and clean as required.\nDay 3: If AQI improves, gradually resume light activities; otherwise maintain precautions.\n\n`;
+            } else if (aqi <= 200) {
+                response += `Day 1: Indoor lockdown; run purifiers at max and seal gaps.\nDay 2: Maintain sealed environment; avoid visitors and non-essential travel.\nDay 3: Reassess AQI trends; prepare to relocate if no improvement.\n\n`;
+            } else {
+                response += `Day 1-3: Emergency precautions — maintain sealed safe-room, consider evacuation options, keep medical support contacts ready.\n\n`;
+            }
+
+            // When to seek medical help
+            response += `**When to Seek Medical Help**\n`;
+            if (aqi <= 100) {
+                response += `Seek medical attention if you have persistent coughing, wheeze, or breathing discomfort that is new or worsening.`;
+            } else if (aqi <= 150) {
+                response += `Consult a healthcare professional if you experience chest tightness, increased shortness of breath, or persistent severe cough.`;
+            } else if (aqi <= 200) {
+                response += `Contact medical services promptly for difficulty breathing, chest pain, or severe wheezing; high-risk individuals should seek guidance proactively.`;
+            } else {
+                response += `URGENT: Seek emergency medical care immediately for severe breathing difficulty, chest pain, fainting, or confusion.`;
+            }
+
+            if (notes) {
+                response += `\n\n**Regarding Your Notes**: ${notes}\n`;
+            }
+
+            return response;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const pmRaw = document.getElementById('pm25').value;
+            const pm = parseFloat(pmRaw);
+            const context = document.getElementById('context').value;
+            const notes = document.getElementById('notes').value;
+
+            if (isNaN(pm) || pm < 0 || pm > 1000) {
+                alert('Please enter a valid PM2.5 value (0 - 1000 µg/m³).');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('btn-loading');
+            btnText.textContent = 'Analyzing...';
+
+            try {
+                const aqi = pm25ToAQI(pm);
+                const category = getAQICategory(aqi);
+
+                // build badge text using preserved font & styles
+                pmBadge.innerHTML = `
+                    <div class="pm-badge ${category.class}">
+                        <div style="display:flex;flex-direction:column;">
+                            <div class="pm-value">${pm.toFixed(1)} &micro;g/m&sup3;</div>
+                            <div class="aqi-value">Computed AQI: <strong style="font-weight:700">${aqi}</strong></div>
+                        </div>
+                        <div style="min-width:14px;"></div>
+                        <div style="padding-left:12px;border-left:1px solid rgba(0,0,0,0.06);font-size:14px">
+                            <div style="font-weight:700">${category.name}</div>
+                        </div>
+                    </div>
+                `;
+
+                const result = await simulateAIResponse(pm.toFixed(1), aqi, context, notes);
+
+                resultsContent.textContent = result;
+                resultsContainer.style.display = 'block';
+
+                setTimeout(() => {
+                    resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            } catch (error) {
+                alert('An error occurred while analyzing. Please try again.');
+                console.error(error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-loading');
+                btnText.textContent = 'Get AI-Powered Guidance';
+            }
+        });
+    </script>
+</body>
+</html>
